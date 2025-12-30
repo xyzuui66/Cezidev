@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>CeziDev Pro v5.0 - Central Database</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=JetBrains+Mono:wght@400;500&display=swap');
+        body { background: #000; color: #fff; font-family: 'Plus Jakarta Sans', sans-serif; height: 100vh; overflow: hidden; }
+        .glass { background: #0a0a0a; border: 1px solid #1a1a1a; border-radius: 24px; }
+        .card-user { background: #111; border: 1px solid #222; border-radius: 16px; transition: 0.3s; }
+        .card-user:hover { border-color: #3b82f6; background: #141414; }
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+    </style>
+</head>
+<body class="p-5 md:p-10 flex flex-col gap-6">
+
+    <header class="flex justify-between items-center">
+        <div>
+            <h1 class="text-3xl font-black italic tracking-tighter text-blue-500">CEZIDEV <span class="text-white">5.0</span></h1>
+            <p class="text-zinc-500 text-xs font-mono uppercase tracking-widest">Global Account & Activity Monitor</p>
+        </div>
+        <div class="flex gap-3">
+            <button onclick="clearAllData()" class="bg-red-500/10 text-red-500 border border-red-500/20 px-4 py-2 rounded-xl text-xs font-bold">Wipe Database</button>
+            <button onclick="syncData()" class="bg-blue-600 px-6 py-2 rounded-xl text-xs font-bold shadow-lg shadow-blue-600/20 hover:scale-105 transition-all">Sync Real-time</button>
+        </div>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 overflow-hidden">
+        
+        <div class="lg:col-span-4 space-y-6 overflow-y-auto pr-2">
+            <div class="glass p-6">
+                <h3 class="text-zinc-500 text-[10px] font-black uppercase mb-4 tracking-widest">Server Status</h3>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-zinc-900/50 p-4 rounded-2xl border border-white/5">
+                        <p class="text-zinc-500 text-[9px] uppercase font-bold">Total Users</p>
+                        <h2 id="total-users" class="text-2xl font-black">0</h2>
+                    </div>
+                    <div class="bg-zinc-900/50 p-4 rounded-2xl border border-white/5">
+                        <p class="text-zinc-500 text-[9px] uppercase font-bold">Online Now</p>
+                        <h2 class="text-2xl font-black text-green-500">LIVE</h2>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass p-6">
+                <h3 class="text-zinc-500 text-[10px] font-black uppercase mb-4 tracking-widest">Global Command</h3>
+                <textarea id="cmd-msg" class="w-full h-24 bg-black border border-zinc-800 rounded-xl p-4 text-xs outline-none focus:border-blue-500 transition-all" placeholder="Kirim pesan ke semua user..."></textarea>
+                <button onclick="sendBroadcast()" class="w-full bg-white text-black mt-3 py-3 rounded-xl font-bold text-xs hover:bg-zinc-200 transition-all">Broadcast Message</button>
+            </div>
+            
+            <div class="glass p-6">
+                <h3 class="text-zinc-500 text-[10px] font-black uppercase mb-4 tracking-widest">Active Session</h3>
+                <div id="active-session-info" class="text-xs text-zinc-400 font-mono">
+                    Monitoring: Browsing...
+                </div>
+            </div>
+        </div>
+
+        <div class="lg:col-span-8 glass p-6 flex flex-col overflow-hidden">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="font-bold flex items-center gap-2 italic">
+                    <i class="fas fa-database text-blue-500"></i> Registered Accounts
+                </h3>
+                <span class="text-[9px] bg-blue-500/10 text-blue-500 px-3 py-1 rounded-full font-bold">v5.0 SECURE</span>
+            </div>
+
+            <div id="user-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4 overflow-y-auto pb-10 pr-2">
+                </div>
+        </div>
+
+    </div>
+
+    <script>
+        function syncData() {
+            // Mengambil database global dan sesi aktif dari CeziRooms
+            const users = JSON.parse(localStorage.getItem('cezi_global_users')) || {};
+            const session = JSON.parse(localStorage.getItem('cezi_session'));
+            const userGrid = document.getElementById('user-grid');
+            const totalUsersDisplay = document.getElementById('total-users');
+            const activeSessionInfo = document.getElementById('active-session-info');
+
+            const userKeys = Object.keys(users);
+            totalUsersDisplay.innerText = userKeys.length;
+
+            if (session) {
+                activeSessionInfo.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <img src="${session.avatar}" class="w-8 h-8 rounded-full">
+                        <div>
+                            <p class="text-blue-500 font-bold">${session.username}</p>
+                            <p class="text-[9px]">Logged: ${session.phone}</p>
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (userKeys.length === 0) {
+                userGrid.innerHTML = `<div class="col-span-full py-20 text-center text-zinc-600 text-xs">Belum ada akun terdaftar.</div>`;
+                return;
+            }
+
+            userGrid.innerHTML = "";
+            userKeys.forEach(key => {
+                const user = users[key];
+                const friendCount = user.friends ? user.friends.length : 0;
+                
+                userGrid.innerHTML += `
+                    <div class="card-user p-4 flex items-center gap-4">
+                        <img src="${user.avatar}" class="w-12 h-12 rounded-full border border-white/5 bg-black">
+                        <div class="flex-1 overflow-hidden">
+                            <div class="flex justify-between items-start">
+                                <h4 class="font-bold text-sm text-zinc-200 truncate">${user.username}</h4>
+                                <span class="text-[8px] bg-green-500/10 text-green-500 px-2 py-0.5 rounded border border-green-500/20">VERIFIED</span>
+                            </div>
+                            <p class="text-[10px] text-zinc-500 font-mono">${user.phone}</p>
+                            <div class="flex gap-3 mt-2">
+                                <span class="text-[9px] text-zinc-400"><i class="fas fa-user-friends mr-1"></i> ${friendCount} Teman</span>
+                                <span class="text-[9px] text-zinc-400"><i class="fas fa-clock mr-1"></i> Active</span>
+                            </div>
+                        </div>
+                        <button onclick="inspectUser('${user.phone}')" class="text-zinc-600 hover:text-white transition"><i class="fas fa-ellipsis-v"></i></button>
+                    </div>
+                `;
+            });
+        }
+
+        function sendBroadcast() {
+            const msg = document.getElementById('cmd-msg').value;
+            if(!msg) return alert("Pesan kosong!");
+            
+            const payload = {
+                message: msg,
+                sender: "SYSTEM-DEV",
+                time: new Date().toLocaleTimeString()
+            };
+            
+            localStorage.setItem('cezi_global_announcement', JSON.stringify(payload));
+            alert("Broadcast Terkirim ke CeziRooms!");
+            document.getElementById('cmd-msg').value = "";
+        }
+
+        function inspectUser(phone) {
+            const users = JSON.parse(localStorage.getItem('cezi_global_users')) || {};
+            const user = users[phone];
+            alert(`
+                DETAIL USER:
+                Username: ${user.username}
+                Phone: ${user.phone}
+                Friends List: ${user.friends.join(', ') || 'Kosong'}
+            `);
+        }
+
+        function clearAllData() {
+            if(confirm("PERINGATAN! Ini akan menghapus SELURUH akun pengguna dan daftar teman. Lanjutkan?")) {
+                localStorage.removeItem('cezi_global_users');
+                localStorage.removeItem('cezi_session');
+                syncData();
+            }
+        }
+
+        // Auto Refresh every 3 seconds
+        setInterval(syncData, 3000);
+        syncData();
+    </script>
+</body>
+</html>
